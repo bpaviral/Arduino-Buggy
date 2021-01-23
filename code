@@ -1,0 +1,165 @@
+#include <AFMotor.h> //Motor sheild Library file
+#include <NewPing.h> //Ultrasonic sensor Library file
+#include <Servo.h>   // Servo Library file
+
+#define TRIG_PIN A4  // Ultrasonic Sensor Trig pin will be connected to the A4 Pin
+#define ECHO_PIN A5  //Ultrasonic Sensor Trig pin will be connected to the A5 Pin
+#define buzzer A3 //buzzer +ve pin 
+#define rightLed 3 // +ve LED for Right side 
+#define leftLed 11 // +ve LED for Left side
+#define MAX_DISTANCE 200 //sets measures for Ultrasonic sensor
+#define MAX_SPEED 190 // sets speed of DC  motors
+#define MAX_SPEED_OFFSET 20 //motor speed control
+
+NewPing sonar(TRIG_PIN, ECHO_PIN, MAX_DISTANCE); 
+
+AF_DCMotor motor1(1); // Motor 1 goes to the number 1 for the motor sheild 
+AF_DCMotor motor2(3); //Motor 2 goes to the number 3 for the motor sheild
+
+Servo myservo;   // declearing servo
+
+boolean goesForward=false;
+int distance = 100;
+int speedSet = 0;
+
+void setup() {
+  pinMode(buzzer, OUTPUT);  // declearing buzzer is output
+  pinMode (rightLed, OUTPUT); // declearing right LED is output
+  pinMode (leftLed, OUTPUT); // declearing left LED is output
+  myservo.attach(9);  //servo goes to pin 9
+  myservo.write(115); 
+  delay(2000);
+  distance = readPing();
+  delay(100);
+  distance = readPing();
+  delay(100);
+  distance = readPing();
+  delay(100);
+  distance = readPing();
+  delay(100);
+}
+
+void loop() {
+ int distanceR = 0; //input from sensor
+ int distanceL =  0; ////input from sensor
+ delay(40);
+ 
+ if(distance<=50) // sensor mesures the distance, if it finds distance equal or less than 50 then 
+ {
+  moveStop();
+  delay(100);
+  moveBackward();
+  delay(300);
+  moveStop();
+  delay(200);
+  distanceR = lookRight();
+  delay(200);
+  distanceL = lookLeft();
+  delay(200);
+
+  if(distanceR>=distanceL) // If right ultrasonic signal goes far than left it goes right otherwise it goes to the left
+  {
+    turnRight();
+    moveStop();
+  }else
+  {
+    turnLeft();
+    moveStop();
+  }
+ }else
+ {
+  moveForward();
+ }
+ distance = readPing();
+}
+
+int lookRight()
+{
+    myservo.write(50); 
+    delay(500);
+    int distance = readPing();
+    delay(100);
+    myservo.write(115); 
+    return distance;
+}
+
+int lookLeft()
+{
+    myservo.write(170); 
+    delay(500);
+    int distance = readPing();
+    delay(100);
+    myservo.write(115); 
+    return distance;
+    delay(100);
+}
+
+int readPing() { 
+  delay(70);
+  int cm = sonar.ping_cm();
+  if(cm==0)
+  {
+    cm = 250;
+  }
+  return cm;
+}
+
+void moveStop() { // both motors get stops and buzzer alarms for 1 sec when there is no way to go forward 
+   digitalWrite(buzzer,HIGH);
+  delay (100);
+  digitalWrite(buzzer,LOW);
+  motor1.run(RELEASE); 
+  motor2.run(RELEASE);
+  } 
+  
+void moveForward() {
+
+ if(!goesForward)
+  {
+    goesForward=true;
+    motor1.run(FORWARD);      
+    motor2.run(FORWARD);      
+   for (speedSet = 0; speedSet < MAX_SPEED; speedSet +=2) // slowly bring the speed up to avoid loading down the batteries too quickly
+   {
+    motor1.setSpeed(speedSet);
+    motor2.setSpeed(speedSet+MAX_SPEED_OFFSET);
+    delay(5);
+   }
+  }
+}
+
+void moveBackward() {
+    goesForward=false;
+    motor1.run(BACKWARD);      
+    motor2.run(BACKWARD);  
+  for (speedSet = 0; speedSet < MAX_SPEED; speedSet +=2) // slowly bring the speed up to avoid loading down the batteries too quickly
+  {
+    motor1.setSpeed(speedSet);
+    motor2.setSpeed(speedSet+MAX_SPEED_OFFSET);
+    delay(5);
+  }
+}  
+
+void turnRight() { //when it decides turns to the right, LED will switched on and motor1 goes forward and second motor turns opposite direction and it will takes 5 secs
+  digitalWrite(rightLed,HIGH);
+  digitalWrite(leftLed,LOW);
+  delay (500);
+  digitalWrite(rightLed,LOW);
+  motor1.run(FORWARD);
+  motor2.run(BACKWARD);     
+  delay(500);
+  motor1.run(FORWARD);      
+  motor2.run(FORWARD);      
+} 
+ 
+void turnLeft() { //when it decides turns to the left, LED will switched on and motor2 goes forward and motor1 turns opposite direction and it will takes 5 secs
+  digitalWrite(leftLed,HIGH);
+  digitalWrite(rightLed,LOW);
+  delay (500);
+  digitalWrite(leftLed,LOW);
+  motor1.run(BACKWARD);     
+  motor2.run(FORWARD);     
+  delay(500);
+  motor1.run(FORWARD);     
+  motor2.run(FORWARD);
+}  
